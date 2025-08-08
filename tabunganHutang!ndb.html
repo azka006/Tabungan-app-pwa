@@ -1,0 +1,2519 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#007bff">
+  <link rel="manifest" href="/manifest.json">
+  
+  <!-- iOS Support -->
+  <link rel="apple-touch-icon" href="/icons/icon-96x96.png">
+  <meta name="apple-mobile-web-app-status-bar" content="#007bff">
+  <link rel="apple-touch-startup-image" href="/splash.png">
+  <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('Service Worker registered'))
+        .catch(err => console.log('Service Worker registration failed: ', err));
+    });
+  }
+</script>
+  <title>Catatan Tabungan & Hutang Warung</title>
+  <style>
+  /* RESET DASAR */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #f0f2f5;
+  color: #333;
+  padding: 20px;
+  font-size: 20px; /* Ukuran font dasar diperbesar */
+}
+
+/* CONTAINER UTAMA */
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  background: #fff;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* HEADING */
+h1, h3 {
+  margin-bottom: 16px;
+  color: #2c3e50;
+}
+
+/* FORM GROUP */
+.form-group {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+input, select{
+  font-size: 23px !important; 
+}
+input[type="text"],
+input[type="date"],
+select {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  transition: border 0.2s;
+}
+
+input:focus, select:focus {
+  border-color: #007bff;
+  outline: none;
+}
+
+/* BUTTONS */
+button {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  margin-right: 10px;
+  transition: background 0.3s;
+  font-size: 18px;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+/* Tombol berdasarkan fungsi */
+button[type="submit"] {
+  background-color: #007bff;
+}
+#formBayar button[type="submit"] {
+  background-color: #17a2b8;
+}
+/* Tambahkan ini di bagian CSS */
+#keterangan {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  transition: border 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
+}
+
+#keterangan:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 8px rgba(0, 123, 255, 0.4);
+}
+#keteranganBayar {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  transition: border 0.2s;
+  margin-bottom: 12px;
+}
+
+#keteranganBayar:focus {
+  border-color: #17a2b8;
+  outline: none;
+}
+
+#keteranganBayarCustom {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  width: 100%;
+  transition: all 0.3s;
+}
+#toggleTabel {
+  background-color: #6c757d;
+}
+/* Perbesar elemen saat dihover */
+button, input, select {
+  transition: transform 0.2s;
+}
+
+button:hover, input:hover, select:hover {
+  transform: scale(1.02);
+}
+/* Tombol aksi di tabel */
+button.lunasi-btn {
+  background-color: #28a745;
+}
+
+button.batal-btn {
+  background-color: #fd7e14;
+}
+
+button.edit-btn {
+  background-color: #ffc107;
+  color: black;
+}
+
+button.hapus-btn {
+  background-color: #e3342f;
+}
+
+button.riwayat-btn {
+  background-color: #6f42c1;
+}
+#batalEdit {
+  background-color: #dc3545;
+}
+
+#batalEdit:hover {
+  background-color: #a71d2a;
+}
+/* Pastikan lebar kolom aksi tetap konsisten */
+#tabelHutang td:nth-child(6) {
+  min-width: 250px;
+}
+/* TABLE STYLE */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 20px !important;
+}
+
+th, td {
+  padding: 12px;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+
+th {
+  background-color: #f1f1f1;
+}
+
+tr:hover {
+  background-color: #f9f9f9;
+}
+
+/* STATUS CLASS */
+tr.lunas {
+  background-color: #e6ffed;
+}
+
+tr.belum-lunas {
+  background-color: #fff3cd;
+}
+.form-group label {
+  font-size: 18px !important;
+}
+/* RINGKASAN */
+.summary {
+  margin-top: 32px;
+  background: #f7f9fb;
+  padding: 16px;
+  border-radius: 10px;
+  font-size: 25px;
+}
+
+.summary p {
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+/* STORAGE */
+
+/* NOTIFIKASI */
+.notification {
+  position: fixed;
+  top: 10px;
+  left: 80%;
+  transform: translateX(-50%);
+  padding: 14px 24px;
+  border-radius: 8px;
+  color: white;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  z-index: 999;
+  font-size: 27px;
+}
+
+.notification.success {
+  background-color: #28a745;
+}
+
+.notification.error {
+  background-color: #dc3545;
+}
+
+/* TOGGLE TABEL */
+.hidden {
+  display: none;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .container {
+    padding: 20px;
+  }
+
+  table, thead, tbody, th, td, tr {
+    display: block;
+  }
+
+  thead {
+    display: none;
+  }
+
+  tr {
+    margin-bottom: 16px;
+    border-radius: 8px;
+    background-color: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    padding: 12px;
+  }
+
+  td {
+    padding: 8px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 18px;
+    border: none;
+    border-bottom: 1px solid #eee;
+  }
+
+  td:last-child {
+    border-bottom: none;
+  }
+  td:nth-child(4)::before {
+    content: "Keterangan: ";
+    font-weight: bold;
+  }
+  button {
+    margin-top: 8px;
+    width: 100%;
+  }
+  /* Ukuran font lebih besar di mobile */
+  table, table td {
+    font-size: 20px !important;
+  }
+  
+  table th {
+    font-size: 18px !important;
+  }
+}
+input[type="text"],
+input[type="date"],
+select {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  transition: border 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
+}
+
+input:focus,
+select:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 8px rgba(0, 123, 255, 0.4); /* glow tipis pas fokus */
+}
+/* FORM & BAGIAN-BAGIAN YANG DIPISAH DENGAN BINGKAI */
+#formHutang,
+.form-pembayaran,
+.summary,
+.storage-info,
+#cari,
+#toggleTabel {
+  background: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+/* KHUSUS UNTUK BAGIAN PENCARIAN & TOGGLE BUTTON */
+#cari {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+}
+
+/* UNTUK GROUP TOGGLE BUTTON */
+#toggleTabel {
+  margin-top: 12px;
+  width: 100%;
+}
+  /* ... CSS yang sudah ada ... */
+
+  /* Gaya untuk riwayat pembayaran */
+  .riwayat-container {
+    display: none;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    width: 100% !important;
+    max-width: 800px !important;
+    font-size: 18px !important;
+    padding: 25px !important;
+    position: relative;
+  }
+
+  .riwayat-container h4 {
+    margin-bottom: 12px;
+    color: #2c3e50;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 8px;
+    font-size: 25px !important;
+  }
+
+  .riwayat-list {
+    list-style-type: none;
+    font-size: 25px !important;
+  }
+
+  .riwayat-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .riwayat-list li:last-child {
+    border-bottom: none;
+  }
+
+  .riwayat-total {
+    font-weight: bold;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 2px solid #ddd;
+    font-size: 25px;
+  }
+
+  .close-riwayat {
+    float: right;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 5px;
+    cursor: pointer;
+    margin-bottom: 12px;
+    font-size: 15px;
+  }
+  /* Style tombol export WhatsApp */
+.whatsapp-export-btn {
+  top: 10px;
+  right: 60px; /* Sesuaikan dengan posisi tombol tutup */
+  background-color: #25D366;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 15px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.whatsapp-export-btn:hover {
+  background-color: #128C7E;
+}
+
+.whatsapp-export-btn::before {
+  content: "📤";
+}
+    /* CSS akan ditambahkan nanti */
+    .hidden { display: none; }
+    .tab-container { margin-bottom: 20px; }
+    .tab-button {
+      padding: 10px 20px;
+      background: #ddd;
+      border: none;
+      cursor: pointer;
+    }
+    .tab-button.active {
+      background: #007bff;
+      color: white;
+    }
+    /* === GAYA KHUSUS TABUNGAN === */
+#tabungan-content {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+#formTabungan .form-group {
+  margin-bottom: 15px;
+}
+
+#formTabungan label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+#formTabungan input, 
+#formTabungan select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+#formTabungan input:focus {
+  border-color: #28a745;
+  box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2);
+}
+
+#jumlahTabungan {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+}
+
+#formTabungan button[type="submit"] {
+  background: #28a745;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+#formTabungan button[type="submit"]:hover {
+  background: #218838;
+}
+#formBon {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+#formBon h3 {
+  color: #dc3545;
+  margin-bottom: 12px;
+}
+
+#formBon button[type="submit"] {
+  background-color: #dc3545;
+}
+
+#formBon button[type="submit"]:hover {
+  background-color: #a71d2a;
+}
+/* Tabel Tabungan */
+#tabelTabungan {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+#tabelTabungan th {
+  background: #28a745;
+  color: white;
+  padding: 12px;
+  text-align: left;
+}
+
+#tabelTabungan td {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+#tabelTabungan tr:hover {
+  background: #f1f8e9;
+}
+
+/* Tombol Aksi */
+.riwayat-btn { background: #17a2b8; color: white; }
+.export-btn { background: #6f42c1; color: white; }
+.hapus-btn { background: #dc3545; color: white; }
+
+/* Riwayat Popup */
+[style*="position: fixed"] {
+  border-radius: 12px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+}
+/* Gaya popup riwayat tabungan */
+[style*="position: fixed"] {
+  width: 90% !important; /* Lebar 90% layar */
+  max-width: 800px !important; /* Maksimal 800px */
+  max-height: 85vh !important; /* Tinggi 85% viewport */
+  font-size: 25px !important; /* Ukuran font lebih besar */
+  padding: 25px !important;
+  border: 3px solid #28a745 !important; /* Garis tebal */
+}
+
+/* Judul popup */
+[style*="position: fixed"] h3 {
+  font-size: 25px !important;
+  margin-bottom: 20px !important;
+}
+
+/* Tabel dalam popup */
+[style*="position: fixed"] table {
+  font-size: 30px !important;
+}
+
+/* Tombol tutup */
+[style*="position: fixed"] button {
+  font-size: 20px !important;
+  padding: 5px 5px !important;
+}
+/* Progress Bar Gabungan */
+.storage-info {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 10px;
+  margin-top: 20px;
+}
+
+.progress-bar {
+  height: 10px;
+  background: #e0e0e0;
+  border-radius: 5px;
+  margin: 10px 0;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: #6c757d;
+  transition: width 0.5s, background 0.3s;
+}
+
+.storage-details {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: #666;
+}
+.backup-section {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 10px;
+}
+
+#backupJson { background: #28a745; }
+#backupCsv { background: #17a2b8; }
+#backupTxt { background: #6c757d; }
+
+button#restoreFile {
+  background: #ffc107;
+  color: #000;
+}
+/* Tambahkan ini ke bagian CSS Anda */
+.table-container {
+  max-height: 800px; /* Sesuaikan tinggi maksimal sesuai kebutuhan */
+  overflow-y: auto; /* Munculkan scroll vertikal jika konten melebihi tinggi */
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+/* Style scrollbar (opsional) */
+.table-container::-webkit-scrollbar {
+  width: 2px;
+}
+
+.table-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Pastikan tabel mengambil lebar penuh */
+.table-container table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* Style header tetap di atas saat scroll */
+.table-container thead th {
+  position: sticky;
+  top: 0;
+  background-color: #f1f1f1;
+  z-index: 10;
+}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>💰 Catatan Tabungan & Hutang Warung</h1>
+    
+    <div class="tab-container">
+      <button class="tab-button active" data-tab="tabungan">Tabungan</button>
+      <button class="tab-button" data-tab="hutang">Hutang</button>
+    </div>
+
+    <!-- TAB TABUNGAN -->
+    <div id="tabungan-content">
+      <!-- Form Input Tabungan -->
+      <form id="formTabungan">
+        <div class="form-group">
+          <label for="namaTabungan">🪪 Nama Penabung:</label>
+          <input type="text" id="namaTabungan" list="daftarPenabung" required>
+          <datalist id="daftarPenabung"></datalist>
+        </div>
+        
+        <div class="form-group">
+          <label for="tanggalTabungan">🗓️ Tanggal:</label>
+          <input type="date" id="tanggalTabungan" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="jumlahTabungan">Jumlah Tabungan (Rp):</label>
+          <input type="text" id="jumlahTabungan" placeholder="Contoh: 50.000" required>
+        </div>
+        
+        <button type="submit">💾 Simpan Tabungan</button>
+      </form>
+        <!-- Taruh di bawah form tabungan -->
+        <form id="formBon" style="margin-top: 20px; border-top: 1px dashed #ccc; padding-top: 20px;">
+          <h3>📤 Pengambilan Uang (Bon)</h3>
+          <div class="form-group">
+            <label for="namaBon">🪪 Nama Penabung:</label>
+            <select id="namaBon" required>
+              <option value="">Pilih penabung</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="tanggalBon">🗓️ Tanggal Ambil:</label>
+            <input type="date" id="tanggalBon" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="jumlahBon">Jumlah Ambil (Rp):</label>
+            <input type="text" id="jumlahBon" placeholder="Contoh: 50.000" required>
+          </div>
+          
+          <button type="submit">💸 Proses Pengambilan</button>
+        </form>
+      <!-- Pencarian -->
+      <div style="margin: 20px 0;">
+        <label for="cariTabungan">🔍 Cari Penabung:</label>
+        <input type="text" id="cariTabungan" placeholder="Ketik nama atau tanggal...">
+      </div>
+
+      <button id="toggleTabelTabungan" style="padding: 8px 16px; margin-bottom: 10px;">
+        👁️ Sembunyikan Tabel
+      </button>
+
+     <div class="table-container">
+  <!-- Daftar Tabungan -->
+      <table id="tabelTabungan">
+        <thead>
+          <tr>
+            <th>Nama</th>
+            <th>Tanggal</th>
+            <th>Jumlah Tabungan</th>
+            <th>Total Tabungan</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+  </div>
+      <!-- Form Backup -->
+      <div style="margin-top: 20px;">
+        <button id="backupAllTabungan">📂 Backup Semua Data Tabungan</button>
+      </div>
+    </div>
+    <!-- TAB HUTANG (dari kode sebelumnya) -->
+    <div id="hutang-content" class="hidden">
+      <form id="formHutang">
+      <div class="form-group">
+        <label for="nama">🪪 Nama:</label>
+        <input type="text" id="nama" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="tanggal">🗓️ Tanggal:</label>
+        <input type="date" id="tanggal" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="jumlah">Jumlah Hutang (Rp):</label>
+        <input type="text" id="jumlah" placeholder="Contoh: 50.000" required>
+      </div>
+      <div class="form-group">
+      <label for="keterangan">📝 Keterangan Hutang:</label>
+      <input type="text" id="keterangan" placeholder="Contoh: Rokok,Roti,dll">
+      </div>
+      <button type="submit">💾 Simpan Hutang</button>
+      <button type="button" id="batalEdit" style="background: #dc3545;">❌ Batal</button>
+    </form>
+
+    <!-- Pencarian -->
+    <div style="margin: 20px 0;">
+      <label for="cari">🔍 Cari nama orang hutang:</label>
+      <input type="text" id="cari" placeholder="Ketik nama orang hutang...">
+    </div>
+    <!-- Taruh di bawah form pencarian -->
+      <div style="margin: 10px 0;">
+        <button id="toggleTabel" style="padding: 8px 16px; background: #6c757d; color: white; border: none; border-radius: 6px;">
+          👁️ Sembunyikan Tabel
+        </button>
+      </div>
+
+   <div class="table-container">
+     <!-- Daftar Hutang -->
+    <table id="tabelHutang">
+      <thead>
+        <tr>
+          <th>Nama</th>
+          <th>Tanggal</th>
+          <th>Jumlah Hutang</th>
+          <th>Keterangan</th>
+          <th>Status</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+   </div>
+<!-- Taruh di bawah form hutang -->
+      <div class="form-pembayaran" style="margin-top: 20px; padding: 16px; background: #f8f9fa; border-radius: 8px;">
+        <h3>💵 Pembayaran Hutang</h3>
+        <form id="formBayar">
+          <div class="form-group">
+            <label for="namaBayar">Nama :</label>
+            <select id="namaBayar" required>
+              <option value="">Pilih nama</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="jumlahBayar">Jumlah Bayar (Rp):</label>
+            <input type="text" id="jumlahBayar" placeholder="Contoh: 50.000" required>
+          </div>
+          <div class="form-group">
+            <label for="tanggalBayar">Tanggal Bayar:</label>
+            <input type="date" id="tanggalBayar" required>
+          </div>
+          <div class="form-group">
+          <label for="keteranganBayar">📝 Keterangan Pembayaran:</label>
+          <select id="keteranganBayar" required>
+            <option value="">Pilih keterangan terkait</option>
+            <!-- Option akan diisi oleh JavaScript -->
+          </select>
+          <input type="text" id="keteranganBayarCustom" placeholder="Atau ketik keterangan custom" style="margin-top: 8px; display: none;">
+          </div>
+          <button type="submit">💳 Simpan Pembayaran</button>
+        </form>
+      </div>
+    <!-- Ringkasan -->
+    <div class="summary">
+      <h3>Ringkasan</h3>
+      <p id="totalOrang">Total Orang yang hutang: 0</p>
+      <p id="totalHutang">Total Hutang: Rp0</p>
+      <p id="totalLunas">Hutang Lunas: Rp0</p>
+      <p id="totalBelumLunas">Hutang Belum Lunas: Rp0</p>
+      </div>
+          <div class="storage-info">
+        <p>💾 Kapasitas LocalStorage: <span id="storageUsed">0 KB</span> / 5 MB</p>
+        <div class="progress-bar">
+          <div id="progressFill" class="progress-fill"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Taruh di bagian bawah sebelum </div> -->
+<div class="backup-section" style="margin-top: 30px; border-top: 1px dashed #ccc; padding-top: 20px;">
+  <h3>🔐 Backup & Restore Data</h3>
+  
+  <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+    <button id="backupJson">💾 Backup JSON</button>
+    <button id="backupCsv">📊 Backup CSV</button>
+    <button id="backupTxt">📝 Backup TXT</button>
+  </div>
+  
+  <div>
+    <input type="file" id="restoreFile" accept=".json,.csv,.txt" style="display: none;">
+    <button onclick="document.getElementById('restoreFile').click()">🔄 Restore Data</button>
+    <small style="display: block; margin-top: 5px;">Support: JSON, CSV, TXT</small>
+  </div>
+  
+  <p id="lastBackupInfo" style="margin-top: 10px; font-style: italic;"></p>
+</div>
+<!-- PROGRESS BAR GABUNGAN (TARUH DI SINI) -->
+<div class="storage-info">
+  <h3>📊 Kapasitas Penyimpanan</h3>
+  <p>Total Terpakai: <span id="totalStorageUsed">0 KB</span> / 50 MB</p>
+  <div class="progress-bar">
+    <div id="totalProgressFill" class="progress-fill"></div>
+  </div>
+  <div class="storage-details">
+    <span>Tabungan: <span id="storageTabungan">0 KB</span></span>
+    <span>Hutang: <span id="storageHutang">0 KB</span></span>
+  </div>
+</div>
+
+  <script>
+    // =============================================
+    // DATABASE MODULE (IndexedDB)
+    // =============================================
+    class WarungDB {
+      constructor() {
+        this.dbName = 'WarungDatabase';
+        this.dbVersion = 4;
+        this.db = null;
+      }
+
+      async initDB() {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open(this.dbName, this.dbVersion);
+          
+          // 🔥 1. PASTIKAN TABEL TERBUAT
+          request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            
+            // Hapus dulu jika tabel sudah ada (optional)
+            if (db.objectStoreNames.contains('tabungan')) {
+              db.deleteObjectStore('tabungan');
+            }
+            if (db.objectStoreNames.contains('hutang')) {
+              db.deleteObjectStore('hutang');
+            }
+            
+            // Buat tabel baru
+            const tabunganStore = db.createObjectStore('tabungan', { 
+              keyPath: 'id', 
+              autoIncrement: true 
+            });
+            tabunganStore.createIndex('nama', 'nama', { unique: false });
+            
+            const hutangStore = db.createObjectStore('hutang', { 
+              keyPath: 'id', 
+              autoIncrement: true 
+            });
+            hutangStore.createIndex('nama', 'nama', { unique: false });
+            
+            console.log('🔥 Tabel dibuat!'); // Pastikan log ini muncul
+          };
+      
+          request.onsuccess = (e) => {
+            this.db = e.target.result;
+            console.log('Database siap! Tabel:', Array.from(this.db.objectStoreNames)); // Debug
+            resolve(this.db);
+          };
+      
+          request.onerror = (e) => {
+            console.error('Gagal buka DB:', e.target.error);
+            reject(e.target.error);
+          };
+        });
+      }
+
+      // Operasi CRUD Tabungan
+      async addTabungan(data) {
+        const tx = this.db.transaction('tabungan', 'readwrite');
+        const store = tx.objectStore('tabungan');
+        return new Promise((resolve, reject) => {
+          const request = store.add(data);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = (e) => reject(e.target.error);
+        });
+      }
+
+      async getAllTabungan() {
+        const tx = this.db.transaction('tabungan', 'readonly');
+        const store = tx.objectStore('tabungan');
+        return new Promise((resolve, reject) => {
+          const request = store.getAll();
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = (e) => reject(e.target.error);
+        });
+      }
+
+      async deleteTabungan(id) {
+        const tx = this.db.transaction('tabungan', 'readwrite');
+        const store = tx.objectStore('tabungan');
+        return new Promise((resolve, reject) => {
+          const request = store.delete(id);
+          request.onsuccess = () => resolve();
+          request.onerror = (e) => reject(e.target.error);
+        });
+      }
+
+      // Operasi CRUD Hutang
+      async addHutang(data) {
+        const tx = this.db.transaction('hutang', 'readwrite');
+        const store = tx.objectStore('hutang');
+        return new Promise((resolve, reject) => {
+          const request = store.add(data);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = (e) => reject(e.target.error);
+        });
+      }
+
+      async getHutangById(id) {
+        const tx = this.db.transaction('hutang', 'readonly');
+        const store = tx.objectStore('hutang');
+        return new Promise((resolve, reject) => {
+          const request = store.get(id);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = (e) => reject(e.target.error);
+        });
+      }
+
+      async getAllHutang() {
+        const tx = this.db.transaction('hutang', 'readonly');
+        const store = tx.objectStore('hutang');
+        return new Promise((resolve, reject) => {
+          const request = store.getAll();
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = (e) => reject(e.target.error);
+        });
+      }
+
+      async updateHutang(id, data) {
+        const tx = this.db.transaction('hutang', 'readwrite');
+        const store = tx.objectStore('hutang');
+        return new Promise((resolve, reject) => {
+          const request = store.put({ ...data, id });
+          request.onsuccess = () => resolve();
+          request.onerror = (e) => reject(e.target.error);
+        });
+      }
+
+      async deleteHutang(id) {
+        const tx = this.db.transaction('hutang', 'readwrite');
+        const store = tx.objectStore('hutang');
+        return new Promise((resolve, reject) => {
+          const request = store.delete(id);
+          request.onsuccess = () => resolve();
+          request.onerror = (e) => reject(e.target.error);
+        });
+      }
+      async getDatabaseSize() {
+          return new Promise((resolve) => {
+            if (!this.db) return resolve(this._emptySize());
+      
+            const txTabungan = this.db.transaction('tabungan', 'readonly');
+            const txHutang = this.db.transaction('hutang', 'readonly');
+            
+            const reqTabungan = txTabungan.objectStore('tabungan').getAll();
+            const reqHutang = txHutang.objectStore('hutang').getAll();
+      
+            Promise.all([
+              new Promise(res => reqTabungan.onsuccess = () => res(reqTabungan.result)),
+              new Promise(res => reqHutang.onsuccess = () => res(reqHutang.result))
+            ]).then(([tabungan, hutang]) => {
+              const sizeTabungan = this._calculateSize(tabungan);
+              const sizeHutang = this._calculateSize(hutang);
+              const totalSize = sizeTabungan + sizeHutang;
+      
+              resolve({
+                total: this._formatSize(totalSize),      // Contoh: "1.25 MB"
+                tabungan: this._formatSize(sizeTabungan), // Contoh: "0.85 MB"
+                hutang: this._formatSize(sizeHutang),     // Contoh: "0.40 MB"
+                raw: { total: totalSize, tabungan: sizeTabungan, hutang: sizeHutang }
+              });
+            }).catch(() => resolve(this._emptySize()));
+          });
+        }
+      
+        // [2] Helper: Hitung ukuran data dalam bytes
+        _calculateSize(data) {
+          return new Blob([JSON.stringify(data)]).size;
+        }
+      
+        // [3] Helper: Format ke KB/MB
+        _formatSize(bytes) {
+          if (bytes === 0) return '0 KB';
+          const kb = bytes / 1024;
+          return kb < 1024 ? `${kb.toFixed(2)} KB` : `${(kb / 1024).toFixed(2)} MB`;
+        }
+      
+        // [4] Helper: Default data kosong
+        _emptySize() {
+          return { 
+            total: '0 KB', 
+            tabungan: '0 KB', 
+            hutang: '0 KB',
+            raw: { total: 0, tabungan: 0, hutang: 0 }
+          };
+        }
+    }
+
+    // =============================================
+    // APPLICATION MODULE
+    // =============================================
+    class WarungApp {
+      constructor() {
+        this.db = new WarungDB();
+        this.currentEditId = null;
+        this.currentEditType = null;
+        
+        // Bind methods yang digunakan di event listener
+        this.formatRupiahInput = this.formatRupiahInput.bind(this);
+        this.handleSubmitTabungan = this.handleSubmitTabungan.bind(this);
+        this.handleSubmitBon = this.handleSubmitBon.bind(this);
+        this.handleSubmitHutang = this.handleSubmitHutang.bind(this);
+        this.handleSubmitBayar = this.handleSubmitBayar.bind(this);
+        this.cancelEdit = this.cancelEdit.bind(this);
+        this.activeTab = localStorage.getItem('activeTab') || 'tabungan';
+        this.setupKeteranganBayar();
+        this.forceUpgradeDB();
+        this.setupBackup();
+        this.checkBackupReminder();
+        
+        this.init();
+      }
+
+      async init() {
+        await this.db.initDB();
+        this.setupEventListeners();
+        this.loadData();
+        this.switchTab(this.activeTab);
+        await this.debugDatabase();
+      }
+
+      setupEventListeners() {
+        // Form Tabungan
+        document.getElementById('formTabungan').addEventListener('submit', this.handleSubmitTabungan);
+        document.getElementById('jumlahTabungan').addEventListener('input', this.formatRupiahInput);
+        
+        // Form Bon
+        document.getElementById('formBon').addEventListener('submit', this.handleSubmitBon);
+        document.getElementById('jumlahBon').addEventListener('input', this.formatRupiahInput);
+        
+        // Form Hutang
+        document.getElementById('formHutang').addEventListener('submit', this.handleSubmitHutang);
+        document.getElementById('jumlah').addEventListener('input', this.formatRupiahInput);
+        
+        // Form Pembayaran Hutang
+        document.getElementById('formBayar').addEventListener('submit', this.handleSubmitBayar);
+        document.getElementById('jumlahBayar').addEventListener('input', this.formatRupiahInput);
+        
+        // Pencarian
+        document.getElementById('cariTabungan').addEventListener('input', (e) => this.filterTabungan(e.target.value));
+        document.getElementById('cari').addEventListener('input', (e) => this.filterHutang(e.target.value));
+        
+        // Tombol Aksi
+        document.getElementById('batalEdit').addEventListener('click', this.cancelEdit);
+        document.getElementById('toggleTabelTabungan').addEventListener('click', () => this.toggleTable('tabelTabungan'));
+        document.getElementById('toggleTabel').addEventListener('click', () => this.toggleTable('tabelHutang'));
+        document.getElementById('backupAllTabungan').addEventListener('click', () => this.backupAllData());
+        
+        // Tab Navigation
+        document.querySelectorAll('.tab-button').forEach(btn => {
+          btn.addEventListener('click', (e) => this.switchTab(e.target.dataset.tab));
+        });
+      }
+      setupKeteranganBayar() {
+        const select = document.getElementById('keteranganBayar');
+        const inputCustom = document.getElementById('keteranganBayarCustom');
+        
+        // Update options saat nama dipilih
+        document.getElementById('namaBayar').addEventListener('change', async (e) => {
+          const nama = e.target.value;
+          if (!nama) return;
+          
+          const hutang = (await this.db.getAllHutang()).find(item => item.nama === nama);
+          if (!hutang) return;
+          
+          select.innerHTML = `
+            <option value="">Pilih keterangan terkait</option>
+            ${hutang.keterangan.split(';').map(k => 
+              `<option value="${k.trim()}">${k.trim()}</option>`
+            ).join('')}
+            <option value="custom">Lainnya...</option>
+          `;
+        });
+        
+        // Toggle input custom
+        select.addEventListener('change', () => {
+          inputCustom.style.display = select.value === 'custom' ? 'block' : 'none';
+          if (select.value !== 'custom') inputCustom.value = '';
+        });
+        
+        // Validasi sebelum submit
+        document.getElementById('formBayar').addEventListener('submit', (e) => {
+          const keterangan = select.value === 'custom' 
+            ? inputCustom.value.trim()
+            : select.value;
+          
+          if (!keterangan) {
+            e.preventDefault();
+            this.showNotification('Harap isi keterangan pembayaran', 'error');
+          }
+        });
+      }
+      async forceUpgradeDB() {
+          const lastVersion = localStorage.getItem('dbVersion') || 0;
+          if (lastVersion < 4) {
+            await new Promise(resolve => {
+              indexedDB.deleteDatabase(this.db.dbName).onsuccess = resolve;
+            });
+            localStorage.setItem('dbVersion', 4);
+            console.log('🔥 Database di-upgrade ke versi 4!');
+            location.reload(); // Refresh halaman
+          }
+        }
+      // =============================================
+      // UTILITY FUNCTIONS
+      // =============================================
+      formatRupiah(angka) {
+        return parseInt(angka).toLocaleString('id-ID');
+      }
+
+      formatRupiahInput(e) {
+        let value = e.target.value.replace(/[^0-9]/g, '');
+        e.target.value = value ? this.formatRupiah(value) : '';
+      }
+
+      formatTanggal(tanggal) {
+        const date = new Date(tanggal);
+        return date.toLocaleDateString('id-ID');
+      }
+
+      showNotification(message, type) {
+        const notif = document.createElement('div');
+        notif.className = `notification ${type}`;
+        notif.textContent = message;
+        document.body.appendChild(notif);
+        
+        setTimeout(() => {
+          notif.style.opacity = '1';
+          setTimeout(() => {
+            notif.style.opacity = '0';
+            setTimeout(() => notif.remove(), 300);
+          }, 3000);
+        }, 100);
+      }
+
+      // =============================================
+      // TABUNGAN FUNCTIONS
+      // =============================================
+      async handleSubmitTabungan(e) {
+        e.preventDefault();
+        
+        const nama = document.getElementById('namaTabungan').value.trim();
+        const tanggal = document.getElementById('tanggalTabungan').value;
+        const jumlah = document.getElementById('jumlahTabungan').value.replace(/\./g, '');
+        
+        if (!nama || !tanggal || !jumlah) {
+          this.showNotification('Semua kolom harus diisi!', 'error');
+          return;
+        }
+        
+        try {
+          const data = {
+            nama,
+            tanggal,
+            jumlah: parseInt(jumlah),
+            jenis: 'setoran',
+            keterangan: 'Setoran tabungan'
+          };
+          
+          await this.db.addTabungan(data);
+          this.showNotification(`Tabungan ${nama} berhasil disimpan!`, 'success');
+          this.loadData();
+          e.target.reset();
+        } catch (error) {
+          this.showNotification('Gagal menyimpan tabungan', 'error');
+          console.error(error);
+        }
+      }
+
+      async handleSubmitBon(e) {
+          e.preventDefault();
+          
+          const nama = document.getElementById('namaBon').value;
+          const tanggal = document.getElementById('tanggalBon').value;
+          const jumlahAmbil = parseInt(document.getElementById('jumlahBon').value.replace(/\./g, ''));
+        
+          // Validasi input
+          if (!nama || !tanggal || isNaN(jumlahAmbil) || jumlahAmbil <= 0) {
+            this.showNotification('Input tidak valid!', 'error');
+            return;
+          }
+        
+          try {
+            // Hitung biaya admin (5rb per 100rb)
+            const biayaAdmin = Math.floor(jumlahAmbil / 100000) * 5000;
+            const totalPotongan = jumlahAmbil + biayaAdmin;
+        
+            // Dapatkan data tabungan
+            const allTabungan = await this.db.getAllTabungan();
+            const tabunganNasabah = allTabungan.filter(t => t.nama === nama);
+            
+            if (tabunganNasabah.length === 0) {
+              this.showNotification('Nasabah tidak ditemukan!', 'error');
+              return;
+            }
+        
+            // Hitung saldo
+            const totalSaldo = tabunganNasabah.reduce((sum, t) => sum + (t.jumlah || 0), 0);
+            
+            if (totalSaldo < totalPotongan) {
+              this.showNotification(`Saldo tidak cukup! Butuh Rp${this.formatRupiah(totalPotongan)}`, 'error');
+              return;
+            }
+        
+            // Simpan data dengan total potongan (pokok + admin)
+            await this.db.addTabungan({
+              nama,
+              tanggal,
+              jumlah: -totalPotongan, // Ini yang utama, simpan total potongan
+              jenis: 'pengambilan',
+              jumlahPokok: -jumlahAmbil, // Simpan pengambilan pokok terpisah
+              biayaAdmin: -biayaAdmin, // Simpan biaya admin terpisah
+              keterangan: `Pengambilan tunai Rp${this.formatRupiah(jumlahAmbil)} + Admin Rp${this.formatRupiah(biayaAdmin)}`
+            });
+        
+            // Update tampilan
+            this.loadData();
+            this.showNotification(
+              `Berhasil ambil Rp${this.formatRupiah(jumlahAmbil)} (Total potong: Rp${this.formatRupiah(totalPotongan)})`, 
+              'success'
+            );
+            e.target.reset();
+            
+          } catch (error) {
+            console.error('Error:', error);
+            this.showNotification('Gagal melakukan pengambilan', 'error');
+          }
+        }
+
+      // =============================================
+      // HUTANG FUNCTIONS
+      // =============================================
+      async handleSubmitHutang(e) {
+        e.preventDefault();
+        
+        const nama = document.getElementById('nama').value.trim();
+        const jumlah = document.getElementById('jumlah').value.replace(/\./g, '');
+        const tanggal = document.getElementById('tanggal').value;
+        const keterangan = document.getElementById('keterangan').value.trim() || '-';
+      
+        if (!nama || !jumlah || !tanggal) {
+          this.showNotification('Semua kolom harus diisi!', 'error');
+          return;
+        }
+      
+        if (isNaN(jumlah) || parseInt(jumlah) <= 0) {
+          this.showNotification('Jumlah hutang harus angka positif!', 'error');
+          return;
+        }
+      
+        try {
+          const jumlahBaru = parseInt(jumlah);
+          
+          if (this.currentEditId && this.currentEditType === 'hutang') {
+            // Mode edit
+            const existing = await this.db.getHutangById(this.currentEditId);
+            
+            if (existing.lunas) {
+              this.showNotification('Tidak bisa mengedit hutang yang sudah lunas!', 'error');
+              return;
+            }
+            
+            await this.db.updateHutang(this.currentEditId, {
+            ...existing, // Pertahankan semua data lama
+            jumlah: existing.jumlah + jumlahBaru,
+            keterangan: existing.keterangan + '; ' + keterangan,
+            lunas: false,
+            tanggal: new Date().toISOString().split('T')[0],
+            riwayatPembayaran: existing.riwayatPembayaran || [] // ✅ Pertahankan riwayat
+          });
+          
+          this.showNotification(`Hutang ${nama} ditambahkan Rp${this.formatRupiah(jumlahBaru)}! Total: Rp${this.formatRupiah(existing.jumlah + jumlahBaru)}`, 'success');
+            this.currentEditId = null;
+            this.currentEditType = null;
+            document.getElementById('batalEdit').style.display = 'none';
+          } else {
+            // Mode tambah baru
+            const existingHutang = await this.db.getAllHutang();
+            const existing = existingHutang.find(item => item.nama.toLowerCase() === nama.toLowerCase() && !item.lunas);
+            
+            if (existing) {
+              // Update hutang yang sudah ada
+              await this.db.updateHutang(existing.id, {
+                ...existing,
+                jumlah: existing.jumlah + jumlahBaru,
+                keterangan: existing.keterangan + '; ' + keterangan,
+                tanggal
+              });
+            } else {
+              // Tambah baru
+              await this.db.addHutang({
+                nama,
+                tanggal,
+                jumlah: jumlahBaru,
+                keterangan,
+                lunas: false,
+                riwayatPembayaran: []
+              });
+            }
+            
+            this.showNotification(`Data ${nama} berhasil disimpan!`, 'success');
+          }
+          
+          this.loadData();
+          e.target.reset();
+        } catch (error) {
+          this.showNotification('Gagal menyimpan hutang', 'error');
+          console.error(error);
+        }
+      }
+
+      async handleSubmitBayar(e) {
+        e.preventDefault();
+        
+        const nama = document.getElementById('namaBayar').value;
+        const jumlah = parseInt(document.getElementById('jumlahBayar').value.replace(/\./g, ''));
+        const tanggal = document.getElementById('tanggalBayar').value;
+        const selectKeterangan = document.getElementById('keteranganBayar');
+        const inputCustom = document.getElementById('keteranganBayarCustom');
+        let keterangan = selectKeterangan.value === 'custom' 
+          ? inputCustom.value.trim()
+          : selectKeterangan.value;
+        
+        if (!keterangan) keterangan = 'Pembayaran hutang';
+        
+        if (!nama || !jumlah || !tanggal) {
+          this.showNotification('Semua kolom harus diisi!', 'error');
+          return;
+        }
+        
+        try {
+          const allHutang = await this.db.getAllHutang();
+          const hutang = allHutang.find(item => item.nama === nama);
+          
+          if (!hutang) {
+            this.showNotification('Nama tidak ditemukan!', 'error');
+            return;
+          }
+          
+          const sisaHutang = hutang.sisaHutang || hutang.jumlah;
+          
+          // Buat objek pembayaran baru
+          const pembayaranBaru = { 
+            tanggal, 
+            jumlah,
+            keterangan 
+          };
+        
+          // Update data hutang
+          const updatedHutang = {
+            ...hutang,
+            riwayatPembayaran: [...(hutang.riwayatPembayaran || []), pembayaranBaru],
+            sisaHutang: sisaHutang - jumlah,
+            lunas: (sisaHutang - jumlah) <= 0
+          };
+        
+          await this.db.updateHutang(hutang.id, updatedHutang);
+          
+          this.showNotification(
+            `Pembayaran ${nama} Rp${this.formatRupiah(jumlah)} (${keterangan}) berhasil!`,
+            'success'
+          );
+        
+          if (updatedHutang.lunas) {
+            this.showNotification(`🎉 ${nama} sudah LUNAS!`, 'success');
+          }
+        
+          this.loadData();
+          e.target.reset();
+        } catch (error) {
+          this.showNotification('Gagal menyimpan pembayaran', 'error');
+          console.error(error);
+        }
+      }
+        async updateStorageInfo() {
+            const storage = await this.db.getDatabaseSize();
+        
+            // Update teks
+            document.getElementById('totalStorageUsed').textContent = storage.total;
+            document.getElementById('storageTabungan').textContent = storage.tabungan;
+            document.getElementById('storageHutang').textContent = storage.hutang;
+        
+            // Update progress bar (limit 50 MB)
+            const totalMB = storage.raw.total / (1024 * 1024);
+            const percent = Math.min((totalMB / 50) * 100, 100);
+            document.getElementById('totalProgressFill').style.width = `${percent}%`;
+        
+            // Beri warna warning jika >60%
+            const progressBar = document.getElementById('totalProgressFill');
+            progressBar.style.background = percent > 60 ? '#ffc107' : '#6c757d';
+          }
+      // =============================================
+      // DATA LOADING & DISPLAY
+      // =============================================
+      async loadData() {
+        await this.loadTabungan();
+        await this.loadHutang();
+        this.updateDaftarNama();
+        this.updateRingkasan();
+        this.updateStorageInfo();
+      }
+
+      async loadTabungan() {
+        try {
+          const data = await this.db.getAllTabungan();
+          const grouped = this.groupTabunganByNama(data);
+          this.displayTabungan(grouped);
+          this.updateDaftarPenabung();
+        } catch (error) {
+          console.error('Gagal memuat tabungan:', error);
+        }
+      }
+
+      groupTabunganByNama(data) {
+        const grouped = {};
+        
+        data.forEach(item => {
+          if (!grouped[item.nama]) {
+            grouped[item.nama] = {
+              nama: item.nama,
+              riwayat: [],
+              total: 0
+            };
+          }
+          
+          grouped[item.nama].riwayat.push(item);
+          grouped[item.nama].total += item.jumlah;
+        });
+        
+        return Object.values(grouped);
+      }
+
+      displayTabungan(data) {
+        const tbody = document.querySelector('#tabelTabungan tbody');
+        tbody.innerHTML = '';
+
+        data.forEach(item => {
+          const lastEntry = item.riwayat[item.riwayat.length - 1];
+          
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${item.nama}</td>
+            <td>${this.formatTanggal(lastEntry.tanggal)}</td>
+            <td>Rp${this.formatRupiah(lastEntry.jumlah)}</td>
+            <td>Rp${this.formatRupiah(item.total)}</td>
+            <td>
+              <button class="riwayat-btn" data-nama="${item.nama}">📜 Riwayat</button>
+              <button class="export-btn" data-nama="${item.nama}">📤 Export</button>
+              <button class="hapus-btn" data-nama="${item.nama}">🗑 Hapus</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        // Tambahkan event listener untuk tombol aksi
+        tbody.querySelectorAll('.riwayat-btn').forEach(btn => {
+          btn.addEventListener('click', () => this.showRiwayatTabungan(btn.dataset.nama));
+        });
+        
+        tbody.querySelectorAll('.export-btn').forEach(btn => {
+          btn.addEventListener('click', () => this.exportTabungan(btn.dataset.nama));
+        });
+        
+        tbody.querySelectorAll('.hapus-btn').forEach(btn => {
+          btn.addEventListener('click', () => this.hapusTabungan(btn.dataset.nama));
+        });
+      }
+
+      async loadHutang() {
+        try {
+          const data = await this.db.getAllHutang();
+          this.displayHutang(data);
+          this.updateDaftarNama();
+          this.updateRingkasan();
+        } catch (error) {
+          console.error('Gagal memuat hutang:', error);
+        }
+      }
+
+      displayHutang(data) {
+        const tbody = document.querySelector('#tabelHutang tbody');
+        tbody.innerHTML = '';
+      
+        data.forEach(item => {
+          const tr = document.createElement('tr');
+          tr.className = item.lunas ? 'lunas' : 'belum-lunas';
+          
+          // Hanya tampilkan tombol edit jika belum lunas
+          const editButton = item.lunas 
+            ? '' 
+            : `<button class="edit-btn" data-id="${item.id}">✏ Edit</button>`;
+          
+          tr.innerHTML = `
+            <td>${item.nama}</td>
+            <td>${this.formatTanggal(item.tanggal)}</td>
+            <td>Rp${this.formatRupiah(item.jumlah)}</td>
+            <td>${item.keterangan || '-'}</td>
+            <td>${item.lunas ? 'Lunas' : 'Belum Lunas'}</td>
+            <td>
+              <button class="${item.lunas ? 'batal-btn' : 'lunasi-btn'}" data-id="${item.id}">
+                ${item.lunas ? '❌ Batalkan' : '✔ Lunasi'}
+              </button>
+              ${editButton}
+              <button class="hapus-btn" data-id="${item.id}">🗑 Hapus</button>
+              <button class="riwayat-btn" data-id="${item.id}">📜 Riwayat</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        // Tambahkan event listener untuk tombol aksi
+        tbody.querySelectorAll('.lunasi-btn, .batal-btn').forEach(btn => {
+          btn.addEventListener('click', () => this.toggleLunas(parseInt(btn.dataset.id)));
+        });
+        
+        tbody.querySelectorAll('.edit-btn').forEach(btn => {
+          btn.addEventListener('click', () => this.editHutang(parseInt(btn.dataset.id)));
+        });
+        
+        tbody.querySelectorAll('.hapus-btn').forEach(btn => {
+          btn.addEventListener('click', () => this.hapusHutang(parseInt(btn.dataset.id)));
+        });
+        
+        tbody.querySelectorAll('.riwayat-btn').forEach(btn => {
+          btn.addEventListener('click', () => this.showRiwayatHutang(parseInt(btn.dataset.id)));
+        });
+      }
+
+      // =============================================
+      // UI UPDATES
+      // =============================================
+      updateDaftarPenabung() {
+        const datalist = document.getElementById('daftarPenabung');
+        const select = document.getElementById('namaBon');
+        
+        datalist.innerHTML = '';
+        select.innerHTML = '<option value="">Pilih penabung</option>';
+        
+        this.db.getAllTabungan().then(data => {
+          const grouped = this.groupTabunganByNama(data);
+          
+          grouped.forEach(item => {
+            // Untuk datalist (autocomplete)
+            const option = document.createElement('option');
+            option.value = item.nama;
+            datalist.appendChild(option);
+            
+            // Untuk select (dropdown bon)
+            const optionSelect = document.createElement('option');
+            optionSelect.value = item.nama;
+            optionSelect.textContent = `${item.nama} (Tabungan: Rp${this.formatRupiah(item.total)})`;
+            select.appendChild(optionSelect);
+          });
+        });
+      }
+
+      updateDaftarNama() {
+        const select = document.getElementById('namaBayar');
+        select.innerHTML = '<option value="">Pilih nama</option>';
+        
+        this.db.getAllHutang().then(data => {
+          data.forEach(item => {
+            if (!item.lunas) {
+              const option = document.createElement('option');
+              option.value = item.nama;
+              option.textContent = `${item.nama} (Sisa: Rp${this.formatRupiah(item.sisaHutang || item.jumlah)})`;
+              option.dataset.keterangan = item.keterangan || '';
+              select.appendChild(option);
+            }
+          });
+        });
+      }
+
+      updateRingkasan() {
+        this.db.getAllHutang().then(data => {
+          // Hitung hanya yang belum lunas
+          const hutangAktif = data.filter(item => !item.lunas);
+          const totalOrang = hutangAktif.length;
+
+          let totalHutang = 0;
+          let totalLunas = 0;
+          let totalBelumLunas = 0;
+
+          data.forEach(item => {
+            const jumlah = parseInt(item.jumlah) || 0;
+            totalHutang += jumlah;
+            
+            if (item.lunas) {
+              totalLunas += jumlah;
+            } else {
+              totalBelumLunas += jumlah;
+            }
+          });
+
+          // Update tampilan
+          document.getElementById('totalOrang').textContent = `Total Orang yang Hutang: ${totalOrang}`;
+          document.getElementById('totalHutang').textContent = `Total Hutang Aktif: Rp${this.formatRupiah(totalBelumLunas)}`;
+          document.getElementById('totalLunas').textContent = `Hutang Lunas: Rp${this.formatRupiah(totalLunas)}`;
+          document.getElementById('totalBelumLunas').textContent = `Hutang Belum Lunas: Rp${this.formatRupiah(totalBelumLunas)}`;
+        });
+      }
+
+      // =============================================
+      // ACTION FUNCTIONS
+      // =============================================
+      async toggleLunas(id) {
+        try {
+          const hutang = await this.db.getHutangById(id);
+          await this.db.updateHutang(id, {
+            ...hutang,
+            lunas: !hutang.lunas
+          });
+          
+          this.showNotification(`Status hutang ${hutang.nama} diubah!`, 'success');
+          this.loadData();
+        } catch (error) {
+          this.showNotification('Gagal mengubah status', 'error');
+          console.error(error);
+        }
+      }
+
+      async editHutang(id) {
+          try {
+            const hutang = await this.db.getHutangById(id);
+            
+            document.getElementById('nama').value = hutang.nama;
+            document.getElementById('tanggal').value = new Date().toISOString().split('T')[0]; // Tanggal hari ini
+            document.getElementById('jumlah').value = '';
+            document.getElementById('keterangan').value = hutang.keterangan || '';
+            document.getElementById('batalEdit').style.display = 'inline-block';
+            
+            this.currentEditId = id;
+            this.currentEditType = 'hutang';
+            this.showNotification(`Menambahkan hutang baru untuk ${hutang.nama}`, 'success');
+          } catch (error) {
+            this.showNotification('Gagal memuat data untuk edit', 'error');
+            console.error(error);
+          }
+        }
+
+      async hapusHutang(id) {
+        if (!confirm('Yakin hapus data ini?')) return;
+        
+        try {
+          await this.db.deleteHutang(id);
+          this.showNotification('Data hutang dihapus!', 'success');
+          this.loadData();
+        } catch (error) {
+          this.showNotification('Gagal menghapus data', 'error');
+          console.error(error);
+        }
+      }
+
+      async hapusTabungan(nama) {
+        if (!confirm(`Yakin hapus semua data tabungan ${nama}?`)) return;
+        
+        try {
+          const allTabungan = await this.db.getAllTabungan();
+          const toDelete = allTabungan.filter(item => item.nama === nama);
+          
+          // Hapus semua entri dengan nama tersebut
+          await Promise.all(toDelete.map(item => this.db.deleteTabungan(item.id)));
+          
+          this.showNotification(`Data tabungan ${nama} dihapus!`, 'success');
+          this.loadData();
+        } catch (error) {
+          this.showNotification('Gagal menghapus data tabungan', 'error');
+          console.error(error);
+        }
+      }
+
+      cancelEdit() {
+        document.getElementById('formHutang').reset();
+        this.currentEditId = null;
+        this.currentEditType = null;
+        document.getElementById('batalEdit').style.display = 'none';
+        this.showNotification('Edit dibatalkan', 'success');
+      }
+
+      // =============================================
+      // RIWAYAT FUNCTIONS
+      // =============================================
+      async showRiwayatTabungan(nama) {
+        try {
+          const allTabungan = await this.db.getAllTabungan();
+          const data = allTabungan.filter(item => item.nama === nama);
+          
+          if (!data.length) return;
+          
+          const total = data.reduce((sum, item) => sum + item.jumlah, 0);
+          
+          let riwayatHTML = `
+            <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            background: white; padding: 20px; border: 3px solid #ddd; z-index: 1000; max-width: 90%; max-height: 70vh; overflow: auto;">
+              <h3>Riwayat Tabungan ${nama}</h3>
+              <p><em><strong>Biaya Admin:</strong> 5rb per 100rb pengambilan</em></p>
+              <button onclick="this.parentElement.remove()" style="float: right; width: 50%; margin-top: 15px;">✕ Tutup</button>
+              <table border="1" style="width: 100%; margin-top: 10px;">
+                <thead>
+                  <tr>
+                    <th>Tanggal</th>
+                    <th>Jenis</th>
+                    <th>Jumlah</th>
+                    <th>Biaya Admin</th>
+                    <th>Total</th>
+                    <th>Keterangan</th>
+                  </tr>
+                </thead>
+                <tbody>
+          `;
+          
+          data.forEach((entry) => {
+            const jenis = entry.jenis === 'pengambilan' ? 'Pengambilan' : 'Setoran';
+            const jumlahClass = entry.jumlah < 0 ? 'style="color: red;"' : '';
+            const biayaAdmin = entry.biayaAdmin ? `Rp${this.formatRupiah(entry.biayaAdmin)}` : '-';
+            const total = entry.jenis === 'pengambilan' 
+              ? `-Rp${this.formatRupiah(Math.abs(entry.jumlah) + (entry.biayaAdmin || 0))}`
+              : `+Rp${this.formatRupiah(entry.jumlah)}`;
+            
+            riwayatHTML += `
+              <tr>
+                <td>${this.formatTanggal(entry.tanggal)}</td>
+                <td>${jenis}</td>
+                <td ${jumlahClass}>${entry.jumlah < 0 ? '-' : ''}Rp${this.formatRupiah(Math.abs(entry.jumlah))}</td>
+                <td>${biayaAdmin}</td>
+                <td ${entry.jenis === 'pengambilan' ? 'style="color: red;"' : ''}>${total}</td>
+                <td>${entry.keterangan || '-'}</td>
+              </tr>
+            `;
+          });
+          
+          riwayatHTML += `
+                </tbody>
+              </table>
+              <p style="margin-top: 10px; font-weight: bold;">
+                Saldo Saat Ini: Rp${this.formatRupiah(total)}
+              </p>
+            </div>
+          `;
+          
+          document.body.insertAdjacentHTML('beforeend', riwayatHTML);
+        } catch (error) {
+          this.showNotification('Gagal memuat riwayat tabungan', 'error');
+          console.error(error);
+        }
+      }
+
+      async showRiwayatHutang(id) {
+        try {
+          const hutang = await this.db.getHutangById(id);
+          if (!hutang) return;
+          
+          const riwayat = hutang.riwayatPembayaran || [];
+          const totalBayar = riwayat.reduce((sum, item) => sum + item.jumlah, 0);
+          const totalHutang = parseInt(hutang.jumlah);
+          const sisaHutang = totalHutang - totalBayar;
+          
+          let riwayatContainer = document.getElementById('riwayatContainer');
+          if (!riwayatContainer) {
+            riwayatContainer = document.createElement('div');
+            riwayatContainer.id = 'riwayatContainer';
+            riwayatContainer.className = 'riwayat-container';
+            document.querySelector('.container').appendChild(riwayatContainer);
+          }
+          
+          riwayatContainer.innerHTML = `
+            <button class="close-riwayat" onclick="this.parentElement.style.display='none'">
+              ✕ Tutup
+            </button>
+            <button class="whatsapp-export-btn" onclick="app.exportHutangToWhatsApp('${hutang.nama}')">
+              📤 Share ke WhatsApp
+            </button>
+            <h4>📜 Riwayat Pembayaran ${hutang.nama}</h4>
+            <ul class="riwayat-list">
+              ${riwayat.map(item => `
+                <li>
+                  <div>
+                    <strong>${this.formatTanggal(item.tanggal)}</strong>
+                    <div class="riwayat-keterangan">${item.keterangan || 'Pembayaran'}</div>
+                  </div>
+                  <span>Rp${this.formatRupiah(item.jumlah)}</span>
+                </li>
+              `).join('')}
+            </ul>
+            <div class="riwayat-total">
+              <div>Total Hutang: Rp${this.formatRupiah(totalHutang)}</div>
+              <div>Total Dibayar: Rp${this.formatRupiah(totalBayar)}</div>
+              <div>Sisa Hutang: Rp${this.formatRupiah(Math.max(sisaHutang, 0))}</div>
+            </div>
+          `;
+          riwayatContainer.style.display = 'block';
+        } catch (error) {
+          this.showNotification('Gagal memuat riwayat hutang', 'error');
+          console.error(error);
+        }
+      }
+
+      // =============================================
+      // EXPORT FUNCTIONS
+      // =============================================
+      async exportTabungan(nama) {
+        try {
+          const allTabungan = await this.db.getAllTabungan();
+          const data = allTabungan.filter(item => item.nama === nama);
+          
+          if (!data.length) return;
+          
+          // Format untuk file text
+          let fileText = `================================\n`;
+          fileText += `       TABUNGAN\n`;
+          fileText += `================================\n`;
+          fileText += `Nama       : ${nama}\n`;
+          fileText += `Saldo      : Rp${this.formatRupiah(data.reduce((sum, item) => sum + item.jumlah, 0))}\n`;
+          fileText += `Biaya Admin: 5rb per 100rb pengambilan\n`;
+          fileText += `================================\n\n`;
+          fileText += `RIWAYAT TRANSAKSI:\n`;
+          fileText += `================================\n`;
+          
+          data.forEach(entry => {
+            const jenis = entry.jenis === 'pengambilan' ? 'PENGAMBILAN' : 'SETORAN';
+            const jumlah = entry.jumlah < 0 ? `-Rp${this.formatRupiah(Math.abs(entry.jumlah))}` : `+Rp${this.formatRupiah(entry.jumlah)}`;
+            
+            fileText += `${this.formatTanggal(entry.tanggal)} - ${jenis}\n`;
+            fileText += `Jumlah    : ${jumlah}\n`;
+            if (entry.biayaAdmin) {
+              fileText += `Biaya Admin: Rp${this.formatRupiah(entry.biayaAdmin)}\n`;
+              fileText += `Total Potong: Rp${this.formatRupiah(Math.abs(entry.jumlah) + entry.biayaAdmin)}\n`;
+            }
+            if (entry.keterangan) fileText += `Keterangan: ${entry.keterangan}\n`;
+            fileText += `--------------------------------\n`;
+          });
+          
+          fileText += `================================\n`;
+          fileText += `Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}\n`;
+        
+          // Format khusus untuk WhatsApp (tanpa karakter aneh)
+          let whatsappText = `*TABUNGAN*\n\n`;
+          whatsappText += `Nama: ${nama}\n`;
+          whatsappText += `Saldo: Rp${this.formatRupiah(data.reduce((sum, item) => sum + item.jumlah, 0))}\n\n`;
+          whatsappText += `*RIWAYAT TRANSAKSI:*\n`;
+          
+          data.forEach(entry => {
+            const jenis = entry.jenis === 'pengambilan' ? 'PENGAMBILAN' : 'SETORAN';
+            const jumlah = entry.jumlah < 0 ? `-Rp${this.formatRupiah(Math.abs(entry.jumlah))}` : `+Rp${this.formatRupiah(entry.jumlah)}`;
+            
+            whatsappText += `\n${this.formatTanggal(entry.tanggal)} - ${jenis}\n`;
+            whatsappText += `Jumlah: ${jumlah}\n`;
+            if (entry.biayaAdmin) {
+              whatsappText += `Biaya Admin: Rp${this.formatRupiah(entry.biayaAdmin)}\n`;
+              whatsappText += `Total: Rp${this.formatRupiah(Math.abs(entry.jumlah) + entry.biayaAdmin)}\n`;
+            }
+            if (entry.keterangan) whatsappText += `(${entry.keterangan})\n`;
+          });
+          
+          whatsappText += `\n_Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}_`;
+        
+          // Download file text
+          const blob = new Blob([fileText], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `Tabungan-${nama}-${new Date().toISOString().split('T')[0]}.txt`;
+          a.click();
+        
+          // Buka WhatsApp dengan format yang lebih clean
+          window.open(`https://wa.me/?text=${encodeURIComponent(whatsappText)}`, '_blank');
+        } catch (error) {
+          this.showNotification('Gagal mengekspor data', 'error');
+          console.error(error);
+        }
+      }
+        async exportHutangToWhatsApp(nama) {
+          try {
+            const allHutang = await this.db.getAllHutang();
+            const hutang = allHutang.find(item => item.nama === nama);
+            
+            if (!hutang) return;
+            
+            const riwayat = hutang.riwayatPembayaran || [];
+            const totalBayar = riwayat.reduce((sum, item) => sum + item.jumlah, 0);
+            const totalHutang = parseInt(hutang.jumlah);
+            const sisaHutang = totalHutang - totalBayar;
+            
+            // Format untuk WhatsApp
+            let whatsappText = `*RIWAYAT HUTANG*\n\n`;
+            whatsappText += `Nama: ${hutang.nama}\n`;
+            whatsappText += `Total Hutang: Rp${this.formatRupiah(totalHutang)}\n`;
+            whatsappText += `Total Dibayar: Rp${this.formatRupiah(totalBayar)}\n`;
+            whatsappText += `Sisa Hutang: Rp${this.formatRupiah(Math.max(sisaHutang, 0))}\n\n`;
+            whatsappText += `*DETAIL PEMBAYARAN:*\n`;
+            
+            riwayat.forEach(payment => {
+              whatsappText += `\n- ${this.formatTanggal(payment.tanggal)}\n`;
+              whatsappText += `  Jumlah: Rp${this.formatRupiah(payment.jumlah)}\n`;
+              whatsappText += `  Keterangan: ${payment.keterangan || '-'}\n`;
+            });
+            
+            whatsappText += `\n_Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}_`;
+            
+            // Buka WhatsApp
+            window.open(`https://wa.me/?text=${encodeURIComponent(whatsappText)}`, '_blank');
+            
+          } catch (error) {
+            this.showNotification('Gagal mengekspor data', 'error');
+            console.error(error);
+          }
+        }
+      async backupAllData() {
+        try {
+          const [tabungan, hutang] = await Promise.all([
+            this.db.getAllTabungan(),
+            this.db.getAllHutang()
+          ]);
+          
+          let text = '=== BACKUP DATA WARUNG ===\n\n';
+          text += '=== TABUNGAN ===\n\n';
+          
+          const groupedTabungan = this.groupTabunganByNama(tabungan);
+          groupedTabungan.forEach(item => {
+            text += `Nama: ${item.nama}\n`;
+            text += `Saldo Akhir: Rp${this.formatRupiah(item.total)}\n`;
+            text += `Riwayat Transaksi:\n`;
+            
+            item.riwayat.forEach(entry => {
+              const jenis = entry.jenis === 'pengambilan' ? 'PENGAMBILAN' : 'SETORAN';
+              const jumlah = entry.jumlah < 0 ? `-Rp${this.formatRupiah(Math.abs(entry.jumlah))}` : `+Rp${this.formatRupiah(entry.jumlah)}`;
+              
+              text += `\n- Tanggal: ${this.formatTanggal(entry.tanggal)}\n`;
+              text += `  Jenis: ${jenis}\n`;
+              text += `  Jumlah: ${jumlah}\n`;
+              
+              if (entry.biayaAdmin) {
+                text += `  Biaya Admin: Rp${this.formatRupiah(entry.biayaAdmin)}\n`;
+                text += `  Total Potong: Rp${this.formatRupiah(Math.abs(entry.jumlah) + entry.biayaAdmin)}\n`;
+              }
+              
+              if (entry.keterangan) {
+                text += `  Keterangan: ${entry.keterangan}\n`;
+              }
+            });
+            
+            text += '\n================================\n\n';
+          });
+          
+          text += '=== HUTANG ===\n\n';
+          
+          hutang.forEach(item => {
+            text += `Nama: ${item.nama}\n`;
+            text += `Status: ${item.lunas ? 'LUNAS' : 'BELUM LUNAS'}\n`;
+            text += `Total Hutang: Rp${this.formatRupiah(item.jumlah)}\n`;
+            text += `Sisa Hutang: Rp${this.formatRupiah(item.sisaHutang || item.jumlah)}\n`;
+            text += `Keterangan: ${item.keterangan || '-'}\n`;
+            text += `Riwayat Pembayaran:\n`;
+            
+            (item.riwayatPembayaran || []).forEach(payment => {
+              text += `\n- Tanggal: ${this.formatTanggal(payment.tanggal)}\n`;
+              text += `  Jumlah: Rp${this.formatRupiah(payment.jumlah)}\n`;
+              text += `  Keterangan: ${payment.keterangan || '-'}\n`;
+            });
+            
+            text += '\n================================\n\n';
+          });
+          
+          text += `Tanggal Backup: ${new Date().toLocaleDateString('id-ID')}\n`;
+          
+          // Download file
+          const blob = new Blob([text], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `Backup-Warung-${new Date().toISOString().split('T')[0]}.txt`;
+          a.click();
+          
+          this.showNotification(
+            `Backup data berhasil! Total ${groupedTabungan.length} nasabah tabungan dan ${hutang.length} hutang.`,
+            'success'
+          );
+        } catch (error) {
+          this.showNotification('Gagal membuat backup', 'error');
+          console.error(error);
+        }
+      }
+      async debugDatabase() {
+          try {
+            // 1. Cek versi database
+            const dbInfo = await indexedDB.databases()
+              .then(dbs => dbs.find(db => db.name === this.db.dbName));
+            
+            console.log("[DEBUG] 🔍 Database Info:", {
+              name: this.db.dbName,
+              version: dbInfo?.version || "N/A",
+              objectStores: dbInfo?.objectStoreNames || []
+            });
+        
+            // 2. Log semua data tabungan
+            const tabungan = await this.db.getAllTabungan();
+            const totalValid = tabungan.reduce((sum, t) => sum + (parseInt(t.total) || 0), 0);
+            console.log("[DEBUG] 💰 Data Tabungan:", {
+              jumlahNasabah: tabungan.length,
+              detail: tabungan.map(t => ({
+                nama: t.nama,
+                total: `Rp${this.formatRupiah(t.total)}`,
+                riwayat: t.riwayat?.length || 0
+              }))
+            });
+        
+            // 3. Log semua data hutang
+            const hutang = await this.db.getAllHutang();
+            console.log("[DEBUG] 📝 Data Hutang:", {
+              jumlahHutang: hutang.length,
+              detail: hutang.map(h => ({
+                nama: h.nama,
+                total: `Rp${this.formatRupiah(h.jumlah)}`,
+                lunas: h.lunas ? "✅ Lunas" : "❌ Belum",
+                riwayatBayar: h.riwayatPembayaran?.length || 0
+              }))
+            });
+        
+          } catch (error) {
+            console.error("[DEBUG] ❌ Error:", error);
+          }
+        }
+      // =============================================
+      // UI HELPERS
+      // =============================================
+      toggleTable(tableId) {
+        const tabel = document.getElementById(tableId);
+        const button = event.target;
+        
+        tabel.classList.toggle('hidden');
+        button.textContent = tabel.classList.contains('hidden') 
+          ? '👁️ Tampilkan Tabel' 
+          : '👁️ Sembunyikan Tabel';
+      }
+
+      switchTab(tabName) {
+        this.activeTab = tabName;
+        localStorage.setItem('activeTab', tabName);
+        document.querySelectorAll('.tab-button').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.tab === tabName);
+        });
+        document.getElementById('hutang-content').classList.toggle('hidden', tabName !== 'hutang');
+        document.getElementById('tabungan-content').classList.toggle('hidden', tabName !== 'tabungan');
+      }
+
+      filterTabungan(keyword) {
+        this.db.getAllTabungan().then(data => {
+          const filtered = keyword 
+            ? data.filter(item => 
+                item.nama.toLowerCase().includes(keyword.toLowerCase()) ||
+                item.tanggal.includes(keyword))
+            : data;
+          
+          const grouped = this.groupTabunganByNama(filtered);
+          this.displayTabungan(grouped);
+        });
+      }
+
+      filterHutang(keyword) {
+        this.db.getAllHutang().then(data => {
+          const filtered = keyword 
+            ? data.filter(item => item.nama.toLowerCase().includes(keyword.toLowerCase()))
+            : data;
+          
+          this.displayHutang(filtered);
+        });
+      }
+        // ======================
+        // BACKUP FUNCTIONS
+        // ======================
+        async setupBackup() {
+          // Backup JSON
+          document.getElementById('backupJson').addEventListener('click', async () => {
+            const data = await this.getAllData();
+            this.downloadFile('warung-backup.json', JSON.stringify(data, null, 2));
+            this.updateLastBackupTime();
+          });
+      
+          // Backup CSV
+          document.getElementById('backupCsv').addEventListener('click', async () => {
+            const data = await this.getAllData();
+            const csv = this.convertToCsv(data);
+            this.downloadFile('warung-backup.csv', csv);
+            this.updateLastBackupTime();
+          });
+      
+          // Backup TXT
+          document.getElementById('backupTxt').addEventListener('click', async () => {
+            const data = await this.getAllData();
+            const txt = this.convertToTxt(data);
+            this.downloadFile('warung-backup.txt', txt);
+            this.updateLastBackupTime();
+          });
+      
+          // Restore
+          document.getElementById('restoreFile').addEventListener('change', (e) => {
+            this.handleRestore(e.target.files[0]);
+            e.target.value = ''; // Reset input
+          });
+        }
+      
+        async getAllData() {
+          return {
+            tabungan: await this.db.getAllTabungan(),
+            hutang: await this.db.getAllHutang(),
+            timestamp: new Date().toISOString()
+          };
+        }
+      
+        downloadFile(filename, content) {
+          const blob = new Blob([content], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          a.click();
+          this.showNotification(`Backup ${filename} berhasil!`, 'success');
+        }
+      
+        convertToCsv(data) {
+          // Convert tabungan to CSV
+          let csv = 'Type,Nama,Tanggal,Jumlah,Keterangan\n';
+          data.tabungan.forEach(item => {
+            csv += `Tabungan,${item.nama},${item.tanggal},${item.jumlah},"${item.keterangan || ''}"\n`;
+          });
+          
+          // Convert hutang to CSV
+          data.hutang.forEach(item => {
+            csv += `Hutang,${item.nama},${item.tanggal},${item.jumlah},"${item.keterangan || ''}"\n`;
+          });
+          
+          return csv;
+        }
+      
+        convertToTxt(data) {
+          let txt = '=== BACKUP DATA WARUNG ===\n\n';
+          txt += `Tanggal: ${new Date(data.timestamp).toLocaleString()}\n\n`;
+          
+          txt += '=== TABUNGAN ===\n';
+          data.tabungan.forEach(item => {
+            txt += `- ${item.nama} | ${item.tanggal} | Rp${this.formatRupiah(item.jumlah)} | ${item.keterangan || ''}\n`;
+          });
+          
+          txt += '\n=== HUTANG ===\n';
+          data.hutang.forEach(item => {
+            txt += `- ${item.nama} | ${item.tanggal} | Rp${this.formatRupiah(item.jumlah)} | ${item.lunas ? 'LUNAS' : 'BELUM LUNAS'} | ${item.keterangan || ''}\n`;
+          });
+          
+          return txt;
+        }
+      
+        // ======================
+        // RESTORE FUNCTIONS
+        // ======================
+        parseTxt(content) {
+            const result = { tabungan: [], hutang: [] };
+            const lines = content.split('\n');
+            let currentSection = null;
+        
+            lines.forEach(line => {
+              line = line.trim();
+              if (line === '=== TABUNGAN ===') {
+                currentSection = 'tabungan';
+              } else if (line === '=== HUTANG ===') {
+                currentSection = 'hutang';
+              } else if (line && currentSection && line.match(/\d+\./)) {
+                const parts = line.split('|').map(part => part.trim());
+                if (currentSection === 'tabungan') {
+                  result.tabungan.push({
+                    nama: parts[1],
+                    tanggal: parts[2],
+                    jumlah: parseInt(parts[3].replace(/[^\d]/g, '')),
+                    jenis: parts[4],
+                    keterangan: parts[5] || ''
+                  });
+                } else if (currentSection === 'hutang') {
+                  result.hutang.push({
+                    nama: parts[1],
+                    tanggal: parts[2],
+                    jumlah: parseInt(parts[3].replace(/[^\d]/g, '')),
+                    lunas: parts[4].includes('LUNAS'),
+                    keterangan: parts[5] || ''
+                  });
+                }
+              }
+            });
+        
+            return result;
+          }
+        
+          parseCsv(content) {
+          const result = { tabungan: [], hutang: [] };
+          const lines = content.split('\n');
+          const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        
+          for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+        
+            const values = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/); // Handle comma in quotes
+            const item = {};
+            
+            headers.forEach((header, index) => {
+              let value = values[index] ? values[index].trim() : '';
+              if (value.startsWith('"') && value.endsWith('"')) {
+                value = value.slice(1, -1);
+              }
+        
+              // Konversi khusus
+              if (header === 'jumlah') value = parseInt(value.replace(/[^\d-]/g, '')) || 0;
+              if (header === 'lunas') value = value === 'TRUE';
+              if (header === 'jenis') value = value.toLowerCase(); // Pastikan lowercase
+        
+              item[header] = value;
+            });
+        
+            // Deteksi jenis transaksi
+            if (lines[i].includes('Tabungan')) {
+              // Auto-detect setoran/pengambilan dari jumlah
+              if (!item.jenis) {
+                item.jenis = item.jumlah >= 0 ? 'setoran' : 'pengambilan';
+              }
+              result.tabungan.push(item);
+            } else if (lines[i].includes('Hutang')) {
+              result.hutang.push(item);
+            }
+          }
+        
+          return result;
+        }
+        parseFile(content, filename) {
+            try {
+              if (filename.endsWith('.json')) {
+                const data = JSON.parse(content);
+                
+                // Validasi struktur data
+                if (!data.tabungan || !data.hutang) {
+                  throw new Error("Format JSON tidak valid: Harus ada properti 'tabungan' dan 'hutang'");
+                }
+        
+                return {
+                  tabungan: data.tabungan.map(item => ({
+                    nama: item.nama,
+                    tanggal: item.tanggal,
+                    jumlah: item.jumlah,
+                    jenis: item.jenis || 'setoran',
+                    keterangan: item.keterangan || '',
+                    biayaAdmin: item.biayaAdmin || 0
+                  })),
+                  hutang: data.hutang.map(item => ({
+                    nama: item.nama,
+                    tanggal: item.tanggal,
+                    jumlah: item.jumlah,
+                    keterangan: item.keterangan || '',
+                    lunas: item.lunas || false,
+                    riwayatPembayaran: item.riwayatPembayaran || []
+                  }))
+                };
+        
+              } else if (filename.endsWith('.csv')) {
+                return this.parseCsv(content);
+                // ... kode parse CSV ...
+              } else if (filename.endsWith('.txt')) {
+                return this.parseTxt(content);
+                // ... kode parse TXT ...
+              } else {
+                throw new Error("Format file tidak didukung");
+              }
+            } catch (error) {
+              console.error("Gagal parsing file:", error);
+              throw new Error(`File backup corrupt atau tidak valid. Error: ${error.message}`);
+            }
+          }
+        async handleRestore(file) {
+          if (!file) return;
+        
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            try {
+              const content = e.target.result;
+              const data = this.parseFile(content, file.name);
+        
+              // Tampilkan preview data sebelum restore
+              const confirmRestore = confirm(
+                `Yakin restore data ini?\n\n` +
+                `➤ Tabungan: ${data.tabungan.length} data\n` +
+                `➤ Hutang: ${data.hutang.length} data\n\n` +
+                `Semua data existing akan dihapus!`
+              );
+        
+              if (confirmRestore) {
+                await this.restoreData(data);
+                this.showNotification(`Restore berhasil! ${data.tabungan.length + data.hutang.length} data dimuat`, 'success');
+                this.loadData();
+              }
+            } catch (error) {
+              this.showNotification(error.message, 'error');
+            }
+          };
+          reader.readAsText(file);
+        }
+      
+        async restoreData(data) {
+        try {
+          // [1] Dapatkan data yang sudah ada (jika ada)
+          const existingTabungan = await this.db.getAllTabungan().catch(() => []);
+          const existingHutang = await this.db.getAllHutang().catch(() => []);
+      
+          // [2] Filter data baru yang belum ada
+          const newTabungan = (data.tabungan || []).filter(newItem => 
+            !existingTabungan.some(existing => 
+              existing.nama === newItem.nama && 
+              existing.tanggal === newItem.tanggal && 
+              existing.jumlah === newItem.jumlah
+            )
+          );
+      
+          const newHutang = (data.hutang || []).filter(newItem => 
+            !existingHutang.some(existing => 
+              existing.nama === newItem.nama && 
+              existing.tanggal === newItem.tanggal && 
+              existing.jumlah === newItem.jumlah
+            )
+          );
+      
+          // [3] Tambahkan hanya data baru
+          let addedCount = 0;
+          for (const item of newTabungan) {
+            await this.db.addTabungan(item);
+            addedCount++;
+          }
+      
+          for (const item of newHutang) {
+            await this.db.addHutang(item);
+            addedCount++;
+          }
+      
+          // [4] Notifikasi hasil
+          const message = addedCount > 0 
+            ? `✅ Restore berhasil! ${addedCount} data baru ditambahkan` 
+            : `ℹ️ Tidak ada data baru yang perlu di-restore`;
+          this.showNotification(message, 'success');
+      
+        } catch (error) {
+          this.showNotification('Gagal restore: ' + error.message, 'error');
+        }
+      }
+      
+        async clearAllData() {
+          const clearTabungan = this.db.getAllTabungan().then(items => {
+            return Promise.all(items.map(item => this.db.deleteTabungan(item.id)));
+          });
+      
+          const clearHutang = this.db.getAllHutang().then(items => {
+            return Promise.all(items.map(item => this.db.deleteHutang(item.id)));
+          });
+      
+          await Promise.all([clearTabungan, clearHutang]);
+        }
+      
+        // ======================
+        // BACKUP REMINDER
+        // ======================
+        checkBackupReminder() {
+          const lastBackup = localStorage.getItem('lastBackup');
+          const lastBackupDate = lastBackup ? new Date(lastBackup) : null;
+          const now = new Date();
+          const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          //const oneHourAgo = new Date(now.getTime() - 1 * 60 * 60 * 1000); // 1 jam = 60 menit x 60 detik x 1000 ms
+          console.log(
+              'Selisih hari:', 
+              Math.floor((now - lastBackupDate) / (1000 * 60 * 60 * 24)), 
+              'dari 7 hari'
+            );
+      
+          if (!lastBackupDate || lastBackupDate < sevenDaysAgo) {
+            this.showNotification('💡 Ingat backup data! Terakhir backup: ' + 
+              (lastBackupDate ? lastBackupDate.toLocaleDateString() : 'belum pernah'), 'error');
+              this.showWhatsAppConfirmation();
+          }
+      
+          this.displayLastBackupTime();
+        }
+      
+        updateLastBackupTime() {
+            const now = new Date();
+            localStorage.setItem('lastBackup', now.toISOString());
+            this.displayLastBackupTime(); // Update tampilan UI
+          }
+          displayLastBackupTime() {
+            const lastBackup = localStorage.getItem('lastBackup');
+            const lastBackupDate = lastBackup ? new Date(lastBackup) : null;
+            
+            if (lastBackupDate) {
+              document.getElementById('lastBackupInfo').textContent = 
+                `Terakhir backup: ${lastBackupDate.toLocaleDateString('id-ID',{
+                  timeZone:'Asia/Jakarta',
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit'
+                })}`;
+            } else {
+              document.getElementById('lastBackupInfo').textContent = 'Belum pernah backup';
+            }
+          }
+        showWhatsAppConfirmation() {
+          const konfirmasi = confirm(
+            "💡 Bu, waktunya backup data nih!\n" +
+            "Sudah 7 hari sejak backup terakhir.\n\n" +
+            "Kirim pesan ke Faiz untuk backup?\n\n" +
+            "Klik 'OK' untuk buka WhatsApp."
+          );
+      
+          if (konfirmasi) {
+            this.openWhatsAppToFaiz();
+            localStorage.setItem('lastBackup', new Date().toISOString()); // Reset timer
+          }
+        }
+      
+        openWhatsAppToFaiz() {
+          const phoneNumber = "6289661006297"; // Ganti dengan nomor Anda
+          const defaultMessage = "Faiz, tolong backup data warung ya. Terima kasih! ";
+          
+          const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(defaultMessage)}`;
+          window.open(whatsappUrl, "_blank");
+        }
+    }
+    // Cek nilai asli di LocalStorage
+console.log(localStorage.getItem('lastBackup')); 
+    // =============================================
+    // INITIALIZE APPLICATION
+    // =============================================
+    document.addEventListener('DOMContentLoaded', () => {
+      window.app = new WarungApp();
+    });
+  </script>
+</body>
+</html>

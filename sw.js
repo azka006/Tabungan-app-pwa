@@ -2,8 +2,6 @@ const CACHE_NAME = 'warung-app-v1';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
-  '/styles.css',
-  '/app.js',
   '/manifest.json',
   '/icons/icon-72x72.png',
   '/icons/icon-512x512.png'
